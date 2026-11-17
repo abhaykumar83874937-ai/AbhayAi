@@ -1,0 +1,210 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidLanguage(lang) {
+      return lang in ['English', 'Hindi', 'Bilingual'];
+    }
+
+    function isValidUserStudyProfile(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             data.dailyGoalMinutes is int && data.dailyGoalMinutes >= 5 && data.dailyGoalMinutes <= 600 &&
+             data.todayMinutesStudied is int && data.todayMinutesStudied >= 0 && data.todayMinutesStudied <= 1440 &&
+             data.todayQuestionsSolved is int && data.todayQuestionsSolved >= 0 && data.todayQuestionsSolved <= 1000 &&
+             data.streakDays is int && data.streakDays >= 0 && data.streakDays <= 3650 &&
+             data.preferredLanguage is string && isValidLanguage(data.preferredLanguage) &&
+             data.lastStudyDate is string && data.lastStudyDate.size() >= 1 && data.lastStudyDate.size() <= 20;
+    }
+
+    function isValidSolvedQuestion(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 60 &&
+             data.topic is string && data.topic.size() <= 100 &&
+             data.questionText is string && data.questionText.size() >= 1 && data.questionText.size() <= 4000 &&
+             data.answerSummary is string && data.answerSummary.size() >= 1 && data.answerSummary.size() <= 16000 &&
+             data.mode is string && data.mode in ['solver', 'math', 'tutor', 'tool'] &&
+             data.language is string && isValidLanguage(data.language) &&
+             data.hasAttachment is bool;
+    }
+
+    function isValidStudyPlanTask(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 60 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+             data.scheduledDate is string && data.scheduledDate.size() >= 1 && data.scheduledDate.size() <= 40 &&
+             data.durationMinutes is int && data.durationMinutes >= 5 && data.durationMinutes <= 360 &&
+             data.completed is bool;
+    }
+
+    function isValidSavedStudyNote(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 60 &&
+             data.toolType is string && data.toolType in ['notes', 'quiz', 'exam_prep', 'grammar', 'dictionary', 'speaking'] &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 24000;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'dailyGoalMinutes',
+                         'todayMinutesStudied', 'todayQuestionsSolved',
+                         'streakDays', 'preferredLanguage', 'lastStudyDate',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'dailyGoalMinutes',
+                         'todayMinutesStudied', 'todayQuestionsSolved',
+                         'streakDays', 'preferredLanguage', 'lastStudyDate',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidUserStudyProfile(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserStudyProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'dailyGoalMinutes', 'todayMinutesStudied',
+                         'todayQuestionsSolved', 'streakDays', 'preferredLanguage',
+                         'lastStudyDate', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /questions/{questionId} {
+        allow get: if isOwner(userId) && isValidId(questionId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(questionId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'subject', 'topic', 'questionText',
+                           'answerSummary', 'mode', 'language', 'hasAttachment',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'subject', 'topic', 'questionText',
+                           'answerSummary', 'mode', 'language', 'hasAttachment',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidSolvedQuestion(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(questionId) &&
+                         isValidSolvedQuestion(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'subject', 'topic', 'questionText', 'answerSummary',
+                           'mode', 'language', 'hasAttachment', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(questionId);
+      }
+
+      match /studyPlans/{planId} {
+        allow get: if isOwner(userId) && isValidId(planId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(planId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'subject', 'title', 'scheduledDate',
+                           'durationMinutes', 'completed', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'subject', 'title', 'scheduledDate',
+                           'durationMinutes', 'completed', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidStudyPlanTask(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(planId) &&
+                         isValidStudyPlanTask(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'subject', 'title', 'scheduledDate', 'durationMinutes',
+                           'completed', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(planId);
+      }
+
+      match /savedNotes/{noteId} {
+        allow get: if isOwner(userId) && isValidId(noteId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(noteId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'subject', 'toolType', 'title', 'content',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'subject', 'toolType', 'title', 'content',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidSavedStudyNote(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(noteId) &&
+                         isValidSavedStudyNote(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'subject', 'toolType', 'title', 'content', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(noteId);
+      }
+    }
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "UserStudyProfile": {
+      "title": "UserStudyProfile",
+      "description": "Student profile and daily study progress metrics",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the student" },
+        "displayName": { "type": "string", "description": "Student display name" },
+        "dailyGoalMinutes": { "type": "integer", "description": "Daily study goal in minutes" },
+        "todayMinutesStudied": { "type": "integer", "description": "Minutes studied today" },
+        "todayQuestionsSolved": { "type": "integer", "description": "Questions solved today" },
+        "streakDays": { "type": "integer", "description": "Consecutive study streak in days" },
+        "preferredLanguage": { "type": "string", "enum": ["English", "Hindi", "Bilingual"] },
+        "lastStudyDate": { "type": "string", "description": "ISO local date of last study session" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "displayName", "dailyGoalMinutes", "todayMinutesStudied", "todayQuestionsSolved", "streakDays", "preferredLanguage", "lastStudyDate", "createdAt", "updatedAt"]
+    },
+    "SolvedQuestion": {
+      "title": "SolvedQuestion",
+      "description": "A solved question or tutoring response saved in study history",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID" },
+        "subject": { "type": "string", "description": "School subject name" },
+        "topic": { "type": "string", "description": "Topic or chapter title" },
+        "questionText": { "type": "string", "description": "Student question prompt" },
+        "answerSummary": { "type": "string", "description": "AI step-by-step solution" },
+        "mode": { "type": "string", "enum": ["solver", "math", "tutor", "tool"] },
+        "language": { "type": "string", "enum": ["English", "Hindi", "Bilingual"] },
+        "hasAttachment": { "type": "boolean", "description": "Whether image or PDF was attached" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "subject", "topic", "questionText", "answerSummary", "mode", "language", "hasAttachment", "createdAt", "updatedAt"]
+    },
+    "StudyPlanTask": {
+      "title": "StudyPlanTask",
+      "description": "Scheduled study planner task for exam preparation",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID" },
+        "subject": { "type": "string", "description": "School subject name" },
+        "title": { "type": "string", "description": "Study task description" },
+        "scheduledDate": { "type": "string", "description": "Planned date or time label" },
+        "durationMinutes": { "type": "integer", "description": "Planned study duration in minutes" },
+        "completed": { "type": "boolean", "description": "Completion flag" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "subject", "title", "scheduledDate", "durationMinutes", "completed", "createdAt", "updatedAt"]
+    },
+    "SavedStudyNote": {
+      "title": "SavedStudyNote",
+      "description": "Saved notes, quiz sets, or study tool artifacts",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID" },
+        "subject": { "type": "string", "description": "School subject name" },
+        "toolType": { "type": "string", "enum": ["notes", "quiz", "exam_prep", "grammar", "dictionary", "speaking"] },
+        "title": { "type": "string", "description": "Note or tool artifact title" },
+        "content": { "type": "string", "description": "Generated study material" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "subject", "toolType", "title", "content", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserStudyProfile" },
+      "description": "Student profile and daily study progress"
+    },
+    "/users/{userId}/questions/{questionId}": {
+      "schema": { "$ref": "#/entities/SolvedQuestion" },
+      "description": "Saved question solver and math solutions"
+    },
+    "/users/{userId}/studyPlans/{planId}": {
+      "schema": { "$ref": "#/entities/StudyPlanTask" },
+      "description": "Student study planner tasks"
+    },
+    "/users/{userId}/savedNotes/{noteId}": {
+      "schema": { "$ref": "#/entities/SavedStudyNote" },
+      "description": "Saved notes, quizzes, and tool outputs"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Abhay GPT",
+  "description": "Abhay GPT — ChatGPT-style AI assistant and all-in-one study companion with step-by-step math, photo/PDF solving, multi-subject tutoring, quizzes, and offline mode.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
